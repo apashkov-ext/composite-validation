@@ -18,19 +18,19 @@ export class ValueState {
  * Basic JavaScript type.
  */
 export type SimpleType = number | string | boolean;
-export type ObjectType = { [key: string]: any; };
+export type ObjectType<T> = {  [K in keyof T]: T[K]; };
 /**
  * Validation function. 
  */
-export type ValidationFunction = (data: any, ...args: any[]) => any;
+export type ValidationFunction<T> = (data: T, ...args: any[]) => any;
 /**
  * Mixed validation function.
  */
-export type MixedValidationFunction = ValidationFunction | Array<ValidationFunction> | VMap;
+export type MixedValidationFunction<T> = ValidationFunction<T> | Array<ValidationFunction<T>> | VMap<T>;
 /**
  * Validation map for data model.
  */
-export type VMap<T> = { [Property in keyof T]: MixedValidationFunction; }
+export type VMap<T> = { [K in keyof T]: MixedValidationFunction<T[K]>; }
 /**
  * Wrapper for basic JavaScript type.
  */
@@ -40,7 +40,7 @@ export class WrappedValue {
      * @param value Inner wrapper value.
      * @param isRequired Value is required.
      */
-    constructor(public value: SimpleType | ObjectType, public isRequired: boolean) {}
+    constructor(public value: SimpleType | ObjectType<any>, public isRequired: boolean) {}
 }
 /**
  * Data model's value validation error.
@@ -53,3 +53,8 @@ export class ValueValidationError {
      */
     constructor(public error: string, public isRequired = false) {}
 }
+
+export type ObjectValidator<T> = (data: Partial<T>, ...args: any[]) => ValidatedObject<T>;
+export type ValidatedObject<T> = Partial<{ [K in keyof T]: WrappedValue | ValueValidationError; }>
+
+export type ArrayValidator<T> = (data: T[], ...args: any[]) => { [key: string]:  WrappedValue | ValueValidationError; }

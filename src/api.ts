@@ -1,4 +1,4 @@
-import { MixedValidationFunction, VMap, ValidationFunction, ObjectType } from './types';
+import { MixedValidationFunction, VMap, ValidationFunction, ObjectType, ObjectValidator, ValidatedObject, ArrayValidator, WrappedValue } from './types';
 import { Utils } from './utils';
 import { ValueValidationError } from './types';
 
@@ -6,21 +6,24 @@ import { ValueValidationError } from './types';
  * Sets validity conditions for data model's value.
  * @param vFunctions Conditions represented by one or more validation functions (operators).
  */
-export function Conditions(...vFunctions: ValidationFunction[]) {
+export function Conditions<T>(...vFunctions: ValidationFunction<T>[]) {
     return ComposeFunctions(vFunctions);
 }
+
+export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
+export type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
 
 /**
  * Applies conditions or validation map for each item of array.
  * @param vFunctions Validity conditions or validation map.
  */
-export function Each(vFunctions: MixedValidationFunction) {
-    return function (data: any, ...args: any[]) {       
+export function Each<T>(vFunctions: MixedValidationFunction<ArrayElement<T>>): ArrayValidator<T> {
+    return function (data: Partial<T>[], ...args: any[]) {       
         if (!data || !Array.isArray(data) || !data.length) {
             return {};
         }
 
-        const output: { [x: string]: any; } = {};           
+        const output: { [key: string]:  WrappedValue | ValueValidationError; } = {};           
         const validator = ComposeFunctions(vFunctions);     
         const length = data.length;
 
@@ -36,27 +39,28 @@ export function Each(vFunctions: MixedValidationFunction) {
  * Creates validation map for data model.
  * @param vmap Validation map definition.
  */
-export function ValidationMap<T>(vMap: (v: T) => VMap<T>) {
-    return function (data: ObjectType, ...args: any[]) {
-        const output: { [x: string]: any; } = {};
-        const keys = Object.keys(vMap);
+export function ValidationMap<T extends ObjectType<T>>(vMap: (model: Partial<T>) => VMap<Partial<T>>): ObjectValidator<T> {
+    return function <K extends keyof T>(data: Partial<T>, ...args: any[]) {
+        const output: ValidatedObject<T> = {};
+        var map = vMap(data);
+        const keys = Object.keys(map).map(m => m as K);
         const length = keys.length;
 
         for (let i = 0; i < length; i++) {
             const key = keys[i];
-            const validator = ComposeFunctions(vMap[key]);
-            const v = data && data[key] 
-            output[key] = validator(v || undefined, ...[data, ...args]);
+            const validator = ComposeFunctions(map[key]);
+            const val = data && data[key] 
+            output[key] = validator(val || undefined, ...[data, ...args]);
         }
 
         return output;
     };
 }
 
-function ComposeFunctions(vf: MixedValidationFunction = (v) => v): any {
+function ComposeFunctions<T>(vf: MixedValidationFunction<T>): any {
     if (!Array.isArray(vf)) { 
         if (vf && typeof vf === 'object') {
-            return ValidationMap(vf);
+            return ValidationMap<T>(() => vf);
         }
         if (vf && typeof vf === 'function') {
             return vf;

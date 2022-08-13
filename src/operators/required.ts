@@ -6,7 +6,7 @@ import { CompositeValidationOptions } from './composite-validation-options';
  * Value is required (should be defined).
  * @param val Verified value.
  */
-export function required<T>(val: T): any;
+export function required(val: any): any;
 /**
  * If condition returns true value is required (should be defined).
  * @param val Verified value.

@@ -1,4 +1,5 @@
-import { ValidationMap } from './api';
+import { Each, ValidationMap } from './api';
+import { equals } from './operators/equals';
 import { required } from './operators/required';
 
 export * from './api';
@@ -10,12 +11,24 @@ export * from './operators/operator';
 export * from './_public-api';
 
 
-interface Model {
-    id: string
+interface InnerModel {
+    title: string;
 }
 
-const map = ValidationMap<Model>(() => ({
-    id: v => required(v)
+interface Model {
+    id: string;
+    props: number[];
+    isFlag: boolean;
+    innerObjects: InnerModel[]
+}
+
+const map = ValidationMap<Model>(m => ({
+    id: v => required(v, () => m.isFlag),
+    props: v => required(v),
+    isFlag: v => equals(v, true),
+    innerObjects: Each(arr => ValidationMap(io => ({
+        title: v => required(v)
+    })))
 }));
 
 var m = { id: '888' };
