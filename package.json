@@ -1,0 +1,36 @@
+{
+  "name": "composite-validation",
+  "version": "1.0.15",
+  "description": "Composite validation API for JS data models",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "lint": "echo \"No lint specified\"",
+    "test": "nyc --reporter=lcovonly --reporter=text mocha -r ts-node/register tests/**/*.test.ts",
+    "test:ci": "npm run test && npm run coverage",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "build": "tsc -p .",
+    "postbuild": "node scripts/postbuild.js",
+    "publish": "npm run build && npm publish ./lib"
+  },
+  "keywords": [
+    "composite",
+    "validation"
+  ],
+  "author": "Alexey Pashkov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apashkov-ext/composite-validation.git"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.9",
+    "@types/mocha": "^7.0.1",
+    "chai": "^4.2.0",
+    "coveralls": "^3.0.9",
+    "mocha": "^7.1.0",
+    "nyc": "^15.0.0",
+    "ts-node": "^8.6.2",
+    "typescript": "~3.5.3"
+  }
+}
