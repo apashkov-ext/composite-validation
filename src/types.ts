@@ -55,6 +55,6 @@ export class ValueValidationError {
 }
 
 export type ObjectValidator<T> = (data: Partial<T>, ...args: any[]) => ValidatedObject<T>;
-export type ValidatedObject<T> = Partial<{ [K in keyof T]: WrappedValue | ValueValidationError; }>
+export type ValidatedObject<T> = Partial<{ [K in keyof T]: WrappedValue | ValueValidationError | ValidatedObject<T[K]>; }>
 
 export type ArrayValidator<T> = (data: T[], ...args: any[]) => { [key: string]:  WrappedValue | ValueValidationError; }

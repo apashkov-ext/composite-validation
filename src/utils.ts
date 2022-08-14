@@ -76,7 +76,7 @@ export class Utils {
      * Else returns argument value.
      * @param value Value wrapper or JS basic type value.
      */
-    public static tryGetValue(obj: WrappedValue | SimpleType | ObjectType): any {
+    public static tryGetValue(obj: any): any {
         return obj instanceof WrappedValue ? obj.value : obj;
     }
 }
