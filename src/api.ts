@@ -1,49 +1,54 @@
-import { MixedValidationFunction, VMap, ValidationFunction, ObjectValidator, ValidatedObject, ArrayValidator, WrappedValue } from './types';
+import { RuleMap, ObjectValidator, ValidatedObject, ArrayValidator, MixedValidator, ValueValidator, Flatten, ValidatedArray, ValidatedValue, ObjectType } from './types';
 import { Utils } from './utils';
 import { ValueValidationError } from './types';
 
 /**
- * Sets validity conditions for data model's value.
- * @param vFunctions Conditions represented by one or more validation functions (operators).
+ * Describes and composes a validity rule with a single or multiple operators.
+ * @param rules Conditions represented by one or more validation functions (operators).
  */
-export function Conditions<T>(...vFunctions: ValidationFunction<T>[]) {
-    return Compose(vFunctions);
+export function rules<T>(...operators: ValueValidator<T>[]): ValueValidator<T> {
+    return Compose(operators) as ValueValidator<T>;
 }
 
-// export type Flatten<A> = A extends (infer T)[] ? T : never;
-export type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
-
 /**
- * Applies conditions or validation map for each item of array.
- * @param vFunctions Validity conditions or validation map.
+ * Applies rules to each element of the array.
+ * @param rules Validity rules described by the value validator.
  */
-export function Each<T>(rules: (arr: T[]) => MixedValidationFunction<Flatten<T>>): ArrayValidator<T> {
-    return function (data: T[], ...args: any[]) {       
+export function each<T extends readonly unknown[]>(rules: (arr: T) => ValueValidator<Flatten<T>>): ArrayValidator<T>;
+/**
+ * Applies rules to each element of the array.
+ * @param rules Validity rules described by the object validator.
+ */
+export function each<T extends readonly unknown[]>(rules: (arr: T) => ObjectValidator<Flatten<T>>): ArrayValidator<T>;
+export function each<T extends readonly unknown[]>(rules: (arr: T) => ValueValidator<Flatten<T>> | ObjectValidator<Flatten<T>>): ArrayValidator<T> {
+    return function (data: T, ...args: any[]) {       
         if (!data || !Array.isArray(data) || !data.length) {
             return {};
         }
 
-        const output: { [key: string]:  WrappedValue | ValueValidationError; } = {};
+        const output: ValidatedArray<T> = {};
         var functions = rules(data);        
         const validator = Compose(functions);     
         const length = data.length;
 
         for (let i = 0; i < length; i++) {
-            output[`item${i}`] = validator(data[i] || undefined, ...[data, ...args]);
+            output[`item${i}`] = validator(data[i] || undefined, ...[data, ...args]) as any;
         }
 
         return output;
     };
 }
 
+export function ruleMap<T extends ObjectType<T>>(rules: RuleMap<Partial<T>>): ObjectValidator<T>;
+export function ruleMap<T extends ObjectType<T>>(rules: (model: Partial<T>) => RuleMap<Partial<T>>): ObjectValidator<T>;
 /**
  * Creates validation map for data model.
  * @param rules Validation map definition.
  */
-export function ValidationMap<T>(rules: (model: Partial<T>) => VMap<Partial<T>>): ObjectValidator<T> {
-    return function <K extends keyof T>(data: Partial<T>, ...args: any[]) {
-        const output: ValidatedObject<T> = {};
-        var map = rules(data);
+export function ruleMap<T extends ObjectType<T>>(rules: RuleMap<Partial<T>> | ((model: Partial<T>) => RuleMap<Partial<T>>)): ObjectValidator<T> {
+    return function <K extends keyof T>(data: Partial<T>, ...args: any[]): ValidatedObject<T> {
+        const output: Partial<ValidatedObject<T>> = {};
+        var map = getMapValue(rules, data);
         const keys = Object.keys(map).map(m => m as K);
         const length = keys.length;
 
@@ -54,37 +59,41 @@ export function ValidationMap<T>(rules: (model: Partial<T>) => VMap<Partial<T>>)
             output[key] = validator(val || undefined, ...[data, ...args]);
         }
 
-        return output;
+        return output as ValidatedObject<T>;
     };
 }
 
-function Compose<T>(vf: MixedValidationFunction<T>): any {
+function getMapValue<T>(rules: RuleMap<Partial<T>> | ((model: Partial<T>) => RuleMap<Partial<T>>), model: Partial<T>): RuleMap<Partial<T>> {
+    if (rules != null && typeof rules === 'function') return rules(model);
+    if (typeof rules === 'object') return rules;
+    throw new Error('Incorrect validation rules definition')
+}
+
+function Compose<T>(vf: MixedValidator<T> | ValueValidator<T>[]): MixedValidator<T> {
     if (!Array.isArray(vf)) { 
-        // if (vf && typeof vf === 'object') {
-        //     return ValidationMap<T>(() => vf);
-        // }
+        if (vf && typeof vf === 'object') {
+            return ruleMap<T>(() => vf);
+        }
         if (vf && typeof vf === 'function') {
             return vf;
         }
-        throw new Error('Неверно задано условие.');
+        throw new Error('Incorrect validation rule definition');
     }
 
     const mapped = vf.map(m => Compose(m));
-    return function (value: any, ...args: any[]) {      
+    return function (value: T, ...args: any[]): ValidatedValue<T> {      
         if (!mapped.length) {
             return Utils.getWrappedValue(value, false);
         }
 
         let isRequired = false;
-        let res = value;
+        let res: any = value;
         for (let i = 0; i < mapped.length; ++i) {
             res = mapped[i](Utils.tryGetValue(res), ...args);
             if (res instanceof ValueValidationError) {
                 break;
             }
-            if (!isRequired && res && res.isRequired === true) {
-                isRequired = true;
-            }
+            isRequired = !isRequired && res && res.isRequired === true;     
         }
 
         if (isRequired) {

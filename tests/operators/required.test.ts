@@ -47,7 +47,7 @@ describe('required with defined error', () => {
   describe('error text', () => {
     it('should return instance of ValueValidationError with text', () => {
       const err = 'Incorrect value';
-      const res = required(null, null, err) as ValueValidationError;
+      const res = required(null, null, err) as ValueValidationError<any>;
       expect(res.error).eq(err);
     });
 
@@ -55,8 +55,8 @@ describe('required with defined error', () => {
 
   describe('error object', () => {
     it('should return instance of WrappedValue', () => {
-      const err = new ValueValidationError('Error');
-      const res = required(null, null, err) as ValueValidationError;
+      const err = new ValueValidationError(null, 'Error');
+      const res = required(null, null, err) as ValueValidationError<any>;
       expect(res).eq(err);
     });
   });

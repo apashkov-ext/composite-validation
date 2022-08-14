@@ -1,20 +1,20 @@
-import { ValueValidationError } from '../types';
+import { ValidatedValue, ValueValidationError } from '../types';
 import { Utils } from '../utils';
 import { CompositeValidationOptions } from './composite-validation-options';
 
 /**
- * value must perform the specified conditions.
+ * Value must perform the specified conditions.
  * @param val Verified value.
  * @param isValidFunc Custom validation function (returns true/false).
  */
-export function operator(val: any, isValidFunc: () => boolean): any;
+export function customValidator<T>(val: T, isValidFunc: () => boolean): ValidatedValue<T>;
 /**
  * If condition returns true value must perform the specified conditions.
  * @param val Verified value.
  * @param isValidFunc Validity conditions represented by custom validation function (returns true/false).
  * @param condition Condition represented by function (returns true/false).
  */
-export function operator(val: any, isValidFunc: () => boolean, condition: () => boolean): any;
+export function customValidator<T>(val: T, isValidFunc: () => boolean, condition: () => boolean): ValidatedValue<T>;
 /**
  * If condition returns true value must perform the specified conditions.
  * @param val Verified value.
@@ -22,9 +22,9 @@ export function operator(val: any, isValidFunc: () => boolean, condition: () => 
  * @param condition Condition represented by function (returns true/false).
  * @param error Error text or object.
  */
-export function operator(val: any, isValidFunc: () => boolean, condition: () => boolean, error: string | ValueValidationError): any;
+export function customValidator<T>(val: T, isValidFunc: () => boolean, condition: () => boolean, error: string | ValueValidationError<T>): ValidatedValue<T>;
 
-export function operator(val: any, isValidFunc: () => boolean,  condition: (() => boolean) | null = null, error: string | ValueValidationError | null = null): any {
+export function customValidator<T>(val: T, isValidFunc: () => boolean,  condition: (() => boolean) | null = null, error: string | ValueValidationError<T> | null = null): ValidatedValue<T> {
 
     if (condition && !condition()) {
         return Utils.getWrappedValue(val);
@@ -34,5 +34,5 @@ export function operator(val: any, isValidFunc: () => boolean,  condition: (() =
         return Utils.getWrappedValue(val);
     }
 
-    return Utils.getErrorObject(!!error ? error : CompositeValidationOptions.errorMatch('invalid'));
+    return Utils.getErrorObject(val, !!error ? error : CompositeValidationOptions.errorMatch('invalid'));
 }

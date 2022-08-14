@@ -1,60 +1,45 @@
-/**
- * Data model's value validity state.
- */
-export class ValueState {
-    /**
-     * Creates instance of value state.
-     * @param name Name of value.
-     * @param valid Value is valid.
-     * @param error Error message.
-     * @param error Value is required.
-     */
-    constructor(public name?: string, 
-        public valid?: boolean, 
-        public error?: string, 
-        public isRequired?: boolean) { }
+export class ValidatedValue2<t> {
+
 }
-/**
- * Basic JavaScript type.
- */
-export type SimpleType = number | string | boolean;
+
 export type ObjectType<T> = {  [K in keyof T]: T[K]; };
-/**
- * Validation function. 
- */
-export type ValidationFunction<T> = (data: T, ...args: any[]) => any;
-/**
- * Mixed validation function.
- */
-export type MixedValidationFunction<T> = ValidationFunction<T> | Array<ValidationFunction<T>> | VMap<T>;
 /**
  * Validation map for data model.
  */
-export type VMap<T> = { [K in keyof T]: MixedValidationFunction<T[K]>; }
+export type RuleMap<T> = { [K in keyof T]: MixedValidator<T[K]>; }
 /**
  * Wrapper for basic JavaScript type.
  */
-export class WrappedValue {
+export class WrappedValue<T> {
     /**
      * Creates instance of wrapper.
-     * @param value Inner wrapper value.
+     * @param value Current value.
      * @param isRequired Value is required.
      */
-    constructor(public value: SimpleType | ObjectType<any>, public isRequired: boolean) {}
+    constructor(public value: T, public isRequired: boolean) {}
 }
 /**
  * Data model's value validation error.
  */
-export class ValueValidationError {
+export class ValueValidationError<T> {
     /**
      * Creates instance of error's object.
+     * @param value Current value.
      * @param error Error message.
      * @param isRequired Value is required.
      */
-    constructor(public error: string, public isRequired = false) {}
+    constructor(public value: T, public error: string, public isRequired = false) {}
 }
 
-export type ObjectValidator<T> = (data: Partial<T>, ...args: any[]) => ValidatedObject<T>;
-export type ValidatedObject<T> = Partial<{ [K in keyof T]: WrappedValue | ValueValidationError | ValidatedObject<T[K]>; }>
+export type ValueValidator<T> = (data: T, ...args: any[]) => ValidatedValue<T>;
+export type ValidatedValue<T> = WrappedValue<T> | ValueValidationError<T>;
 
-export type ArrayValidator<T> = (data: T[], ...args: any[]) => { [key: string]:  WrappedValue | ValueValidationError; }
+export type ObjectValidator<T> = (data: Partial<T>, ...args: any[]) => ValidatedObject<T>;
+export type ValidatedObject<T> = { [K in keyof T]: ValidatedValue<T[K]> | ValidatedObject<T[K]> | ValidatedArray<T[K]>; }
+
+export type ArrayValidator<T> = (data: T, ...args: any[]) => ValidatedArray<T>;
+export type ValidatedArray<T> = { [key: string]:  ValidatedValue<Flatten<T>> | ValidatedObject<Flatten<T>>; }
+
+export type MixedValidator<T> = ValueValidator<T> | ArrayValidator<T> | ObjectValidator<T>
+
+export type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;

@@ -1,5 +1,6 @@
-import { WrappedValue, ValueValidationError, SimpleType, ObjectType } from './types';
-import { CompositeValidationOptions } from './operators/composite-validation-options';
+import { WrappedValue, ValueValidationError } from './types';
+import { CompositeValidationOptions } from './validators/composite-validation-options';
+import { ValidityStateEnum } from "./validators/validity-state.enum";
 
 /**
  * Validation API helpers.
@@ -47,19 +48,19 @@ export class Utils {
      * @param isRequired Value is required.
      * @param args Values for substitution using token replacer.
      */
-    public static getErrorObject(error: string | ValueValidationError, isRequired = false, args?: any[]): ValueValidationError {
+    public static getErrorObject<T>(value: T, error: string | ValueValidationError<T>, isRequired = false, args?: any[]): ValueValidationError<T> {
         if (typeof error === 'string') {
             if (args && args.length) {
                 error = Utils.evaluateMessage(error, args);
             }
-            return new ValueValidationError(error, isRequired);
+            return new ValueValidationError(value, error, isRequired);
         }
 
         if (error instanceof ValueValidationError) {
             return error;
         }
 
-        return new ValueValidationError(CompositeValidationOptions.errorMatch('invalid'), isRequired);
+        return new ValueValidationError(value, CompositeValidationOptions.errorMatch('invalid'), isRequired);
     }
 
     /**
@@ -67,16 +68,16 @@ export class Utils {
      * @param value Inner value.
      * @param isRequired Value is required.
      */
-    public static getWrappedValue(value: number | string | boolean, isRequired = false): WrappedValue {
+    public static getWrappedValue<T>(value: T, isRequired = false): WrappedValue<T> {
         return new WrappedValue(value, isRequired);
     }
 
     /**
      * If argument is wrapped value (instance of ValueWrapper) returns inner value.
      * Else returns argument value.
-     * @param value Value wrapper or JS basic type value.
+     * @param obj Value wrapper or JS basic type value.
      */
-    public static tryGetValue(obj: any): any {
+    public static tryGetValue<T>(obj: T | WrappedValue<T>): T {
         return obj instanceof WrappedValue ? obj.value : obj;
     }
 }

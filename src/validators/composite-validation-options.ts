@@ -22,3 +22,4 @@ export class CompositeValidationOptions {
         CompositeValidationOptions._errorMatches = Object.assign(CompositeValidationOptions._errorMatches, value);
     }
 }
+
